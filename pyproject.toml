@@ -1,0 +1,29 @@
+[tool.poetry]
+name = "cupang-updater"
+version = "0.1.0"
+description = "Minecraft plugin/mod updater for server"
+authors = ["cupang-afk <pixelview56@gmail.com>"]
+readme = "README.md"
+
+[tool.poetry.dependencies]
+python = "^3.10"
+strictyaml = "^1.7.3"
+rich = "^13.7.0"
+packaging = "^23.2"
+toml = "^0.10.2"
+python-dateutil = "^2.8.2"
+
+[build-system]
+requires = ["poetry-core"]
+build-backend = "poetry.core.masonry.api"
+
+[tool.poetry.scripts]
+cupang-updater = "cupang_updater.main:main"
+
+[tool.ruff]
+line-length = 120
+
+[tool.ruff.format]
+quote-style = "double"
+indent-style = "space"
+docstring-code-format = true

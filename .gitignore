@@ -1,0 +1,4 @@
+**/*.log**
+**/test*
+**/__pycache__
+poetry.lock
