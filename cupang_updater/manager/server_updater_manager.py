@@ -31,20 +31,27 @@ class ServerUpdaterManager(metaclass=ServerUpdaterManagerSingleton):
                 result.append(k)
         return result
 
-    def get_updaters(self) -> dict[type[ServerUpdaterBase], list[str]]:
+    def get_updaters(self, server_type: str) -> list[type[ServerUpdaterBase]]:
+        """get the list of updater that support the `server_type`
+
+        Args:
+            server_type (str): the type of the server e.g, paper, purpur, bungeecord, etc
+
+        Returns:
+            list[type[ServerUpdaterBase]]
         """
-        Returns the updater as the key, and supporter server_type as the value
-        """
-        return self.__updaters
+        result = list(map(lambda i: i[0] if server_type in i[1] else None, self.__updaters.items()))
+        result = list(filter(lambda i: i is not None, result))
+        return result
 
     def register(self, cls: ServerUpdaterBase):
-        """
-        Registers an updater class.
+        """_summary_
 
-        Parameters:
-        - cls: An instance of the ServerUpdaterBase class to register.
+        Args:
+            cls (ServerUpdaterBase): An instance of the ServerUpdaterBase class to register
 
-        Note: The provided `cls` instance should be initialized before registration.
+        Raises:
+            ValueError: cls should inherit `ServerUpdaterBase` and initialized
         """
 
         log.info(f"Registering server updater {cls.name}")
