@@ -197,12 +197,11 @@ class Config:
                 continue
             self.set(f"updater_settings.{k}", v)
 
-    def update_update_order(self, order_list: list[str]):
-        for i in order_list:
-            _data = self.get("settings.update_order").data
-            if i in _data:
-                continue
-            self.set("settings.update_order", _data + [i])
+    def update_update_order(self, new_update_order: list[str]):
+        current_update_order = self.get("settings.update_order").data
+        new_update_order = list(filter(lambda x: x not in current_update_order, new_update_order))
+
+        self.set("settings.update_order", new_update_order)
 
     def update_server_folder(self, path: str):
         _path = ensure_path(path)
