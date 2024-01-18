@@ -40,10 +40,7 @@ def main():
             u.register(i())
 
         e.register(app_ext_updater)
-        # if args.ext_updater:
-        #     e.register(app_ext_updater, *args.ext_updater)
-        # else:
-        #     e.register(app_ext_updater)
+
         log.info("Loading config")
         if not app_config.exists():
             c = Config.create_config(app_config)
@@ -59,12 +56,9 @@ def main():
                     c.update_server_folder(server_folder)
                     break
                 log.error("Must be a full path (i.e. /root/minecraft)")
-        # c.update_server_folder("E:\\RECODED_UPDATER_2\\test__")
-        c.update_server_type([x for types in list(s.get_updaters().values()) for x in types])
+        c.update_server_type(s.get_supported_type())
         c.update_update_order(list(u.get_updaters().keys()))
         c.update_updater_settings(u.get_updater_settings_default())
-
-        # exit()
 
         if args.scan_only:
             scan_plugins(c)
