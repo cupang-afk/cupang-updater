@@ -25,6 +25,130 @@ from ..utils.hash import FileHash
 log = LoggerManager().get_log()
 
 
+def check_cooldown(last_update: Date, cooldown: timedelta):
+    today = Date.now()
+    if (today.local - last_update.local) <= cooldown:
+        remaining = (last_update.local + cooldown) - today.local
+        log.info(f"Updater still in cooldown, {round(remaining.total_seconds() / 3600)} hours remaining")
+        return True
+    return False
+
+
+def status_update(msg: str, *, log_type: str = "info", no_log: bool = False):
+    app_status.update(msg)
+    if not no_log:
+        log_msg = getattr(log, log_type, log.info)
+        log_msg(msg)
+
+
+def handle_server_update(
+    server_folder: Path,
+    server_data: dict,
+):
+    server_file = server_folder / str(server_data["file"])
+    server_type = server_data["type"]
+    server_version = server_data["version"]
+    server_build_number = server_data["build_number"]
+    if server_file.exists():
+        server_hash = FileHash.with_known_hashes(server_file, server_data["hashes"])
+    else:
+        server_hash = FileHash.with_known_hashes(server_file, dict(md5="a", sha1="b", sha256="c", sha512="d"))
+
+    updater_list: list[type[ServerUpdaterBase]] = ServerUpdaterManager().get_updaters(server_type)
+    for updater in updater_list:
+        updater = updater()
+        try:
+            check_update = updater.check_update(
+                server_type,
+                server_version,
+                server_hash,
+                server_build_number,
+            )
+        except Exception as e:
+            log.error(f"When trying to update server using {updater.name}\n" f"got error: [bold red]{e}")
+
+        if check_update:
+            status_update(f"Updating {server_type} {server_version}", no_log=True)
+            new_file = download(updater.get_url(), server_file.name, updater.get_headers())
+            if new_file is None:
+                log.error(f"Trying another server updater for {server_type}")
+                continue
+            shutil.move(new_file.absolute(), (server_folder / server_file).absolute())
+            return updater.get_build_number(), FileHash(new_file)
+    return
+
+
+def handle_plugin_update(
+    server_folder: Path,
+    plugin_name: str,
+    plugin_data: dict,
+    updater_settings: dict[str, Any],
+    updater_list: list[type[PluginUpdaterBase]],
+):
+    plugins_folder = server_folder / "plugins"
+
+    plugin_file = plugins_folder / str(plugin_data["file"])
+    plugin_version = plugin_data["version"]
+    plugin_hash = FileHash.with_known_hashes(plugin_file, plugin_data["hashes"])
+
+    for updater in updater_list:
+        updater = updater()
+        # the updater config, but in plugins section
+        plugin_config = deepcopy([plugin_data[updater.config_path]])[0]
+        # the updater config, but in updater settings section
+        updater_config = deepcopy([updater_settings.get(updater.config_path)])[0]
+
+        try:
+            check_update = updater.check_update(
+                plugin_name,
+                plugin_version,
+                plugin_hash,
+                plugin_config,
+                updater_config,
+            )
+        except Exception as e:
+            log.error(f"When trying to update {plugin_name} using {updater.name}\n" f"got error: [bold red]{e}")
+            continue
+        if check_update:
+            new_version = updater.get_plugin_version()
+            new_file_name = f"{updater.get_plugin_name()} [{updater.name}]"
+
+            new_file = download(
+                updater.get_url(),
+                new_file_name + f" [{new_version or 'Latest'}].jar",
+                updater.get_headers(),
+            )
+            if new_file is None:
+                log.error(f"Trying another plugin updater for {updater.get_plugin_name()}")
+                continue
+
+            if new_version is None:
+                _, new_version, _ = jar_info(new_file)
+            new_file_name = new_file_name + f" [{new_version}].jar"
+            new_file_hash = FileHash(new_file)
+
+            new_plugin_data = {
+                "file": new_file_name,
+                "version": str(new_version),
+                "hashes": {
+                    "md5": new_file_hash.md5(),
+                    "sha1": new_file_hash.sha1(),
+                    "sha256": new_file_hash.sha1(),
+                    "sha512": new_file_hash.sha512(),
+                },
+                "update_config": {
+                    "path": f"{plugin_name}.{updater.config_path}",
+                    "plugin_config": updater.get_plugin_config_updates(),
+                    "updater_config": updater.get_updater_config_updates(),
+                },
+            }
+
+            plugin_file.unlink(missing_ok=True)
+            shutil.move(new_file.absolute(), (plugins_folder / new_file_name).absolute())
+            return updater.get_plugin_name(), new_plugin_data
+    return
+
+
 def update_plugins(config: Config):
     last_update = config.get("settings.last_update").data
     if last_update and not args.force:
@@ -39,19 +163,6 @@ def update_plugins(config: Config):
             log.info(f"Updater still in cooldown, {round(remaining.total_seconds() / 3600)} hours remaining")
             return
 
-    def status_update(msg: str, log_type: str = "info", no_log: bool = False):
-        app_status.update(msg)
-        if not no_log:
-            match log_type.lower():
-                case "error":
-                    log.error(app_status.status)
-                case "warning":
-                    log.warning(app_status.status)
-                case "debug":
-                    log.debug(app_status.status)
-                case _:
-                    log.info(app_status.status)
-
     with app_live(Group(app_progress, app_status)):
         app_status.update("...")
 
@@ -59,48 +170,19 @@ def update_plugins(config: Config):
         if config.get("server.enable", True):
             status_update("Updating server")
 
-            server_file = server_folder / str(config.get("server.file").data)
-
-            # calculate hashes
-            # if not exists, set placeholder
-            if server_file.exists():
-                hash = FileHash(server_file)
-                hashes = {
-                    "md5": hash.md5(),
-                    "sha1": hash.sha1(),
-                    "sha256": hash.sha1(),
-                    "sha512": hash.sha512(),
-                }
-                config.set("server.hashes", hashes)
-            else:
-                config.set("server.hashes", {"md5": "a", "sha1": "b", "sha256": "c", "sha512": "d"})
-
-            server_type = config.get("server.type").data
-            server_version = config.get("server.version").data
-            server_build_number = config.get("server.build_number").data
-            server_hashes = FileHash.with_known_hashes(server_folder / server_file, config.get("server.hashes").data)
-            server_updater_manager = ServerUpdaterManager()
-
-            server_updater_list: list[type[ServerUpdaterBase]] = server_updater_manager.get_updater(server_type)
-            for updater in server_updater_list:
-                updater = updater()
-
-                if updater.check_update(
-                    server_type,
-                    server_version,
-                    server_hashes,
-                    server_build_number,
-                ):
-                    status_update(f"Updating {server_type} {server_version}", no_log=True)
-                    new_file = download(updater.get_url(), server_file.name, updater.get_headers())
-                    if new_file is None:
-                        log.error(f"Trying another server updater for {server_type}")
-                        continue
-                    config.set("server.build_number", updater.get_build_number())
-                    config.set("server.hashes.md5", FileHash(new_file).md5())
-                    shutil.move(new_file.absolute(), (server_folder / server_file).absolute())
-                    break
-
+            result = handle_server_update(server_folder, config.get("server").data)
+            if result is not None:
+                new_build_number, new_hash = result
+                config.set("server.build_number", new_build_number)
+                config.set(
+                    "server.hashes",
+                    dict(
+                        md5=new_hash.md5(),
+                        sha1=new_hash.sha1(),
+                        sha256=new_hash.sha256(),
+                        sha512=new_hash.sha512(),
+                    ),
+                )
             status_update("Finished updating server")
 
         status_update("Prepare updating plugins")
@@ -110,94 +192,26 @@ def update_plugins(config: Config):
             return 1
 
         updater_manager = UpdaterManager()
-        updater_settings = config.get("updater_settings").data
+
         log.info("Get updater order")
         updater_list: list[type[PluginUpdaterBase]] = []
         for i in config.get("settings.update_order", sy.YAML([], sy.EmptyList())).data:
-            if app_stop_event.is_set():
-                break
-            updater = updater_manager.get_updater(i)
-
             # TODO: make this check happen at register
+            updater = updater_manager.get_updater(i)
             if updater is None:
                 log.error(f"Updater {i} is not registered")
                 continue
-
             updater_list.append(updater)
 
         plugins: dict[str, dict[str, Any]] = deepcopy(dict(config.get("plugins").data))
-        updated_plugins: dict[str, dict[str, Any]] = {}
 
         workers = ThreadPool(5)
         worker_jobs: list[ApplyResult] = []
 
-        def update_helper(
-            updater_list: list[type[PluginUpdaterBase]],
-            plugin_name: str,
-            plugin_data: dict,
-            updated_plugins: dict[str, dict[str, Any]],
-            old_file: Path,
-        ):
-            for updater in updater_list:
-                # initialize updater
-                updater = updater()
-                plugin_config = deepcopy([plugin_data[updater.config_path]])[0]
-                updater_config = deepcopy([updater_settings.get(updater.config_path)])[0]
-                if updater.check_update(
-                    plugin_name,
-                    plugin_data["version"],
-                    FileHash.with_known_hashes(old_file, plugin_data["hashes"]),
-                    plugin_config,
-                    updater_config,
-                ):
-                    try:
-                        new_version = updater.get_plugin_version()
-                        new_file_name = f"{updater.get_plugin_name()} [{updater.name}]"
-
-                        new_file = download(
-                            updater.get_url(),
-                            new_file_name + f" [{new_version or 'Latest'}].jar",
-                            updater.get_headers(),
-                        )
-                        if new_file is None:
-                            log.error(f"Trying another plugin updater for {updater.get_plugin_name()}")
-                            continue
-
-                        if new_version is None:
-                            _, new_version, _ = jar_info(new_file)
-                        new_file_name = new_file_name + f" [{new_version}].jar"
-                        new_file_hash = FileHash(new_file)
-
-                        updated_plugins[updater.get_plugin_name()] = {
-                            "file": new_file_name,
-                            "version": str(new_version),
-                            "hashes": {
-                                "md5": new_file_hash.md5(),
-                                "sha1": new_file_hash.sha1(),
-                                "sha256": new_file_hash.sha1(),
-                                "sha512": new_file_hash.sha512(),
-                            },
-                            "update_config": {
-                                "path": f"{plugin_name}.{updater.config_path}",
-                                "plugin_config": updater.get_plugin_config_updates(),
-                                "updater_config": updater.get_updater_config_updates(),
-                            },
-                        }
-
-                        old_file.unlink(missing_ok=True)
-                        shutil.move(new_file.absolute(), (plugins_folder / new_file_name).absolute())
-                        break
-                    except Exception as e:
-                        log.error(
-                            f"When trying to update {updater.get_plugin_name()} using {updater.name}\n"
-                            f"got error: [bold red]{e}"
-                        )
-
         status_update("Adding update bobs")
         for plugin_name, plugin_data in plugins.items():
-            status_update(f"Adding job for {plugin_name}", "debug")
+            status_update(f"Adding job for {plugin_name}", log_type="debug")
 
-            # get old file
             old_file = plugins_folder / str(plugin_data.get("file", ".unknown"))
 
             # skip excluded
@@ -212,16 +226,28 @@ def update_plugins(config: Config):
             # add download job
             worker_jobs.append(
                 workers.apply_async(
-                    update_helper,
+                    handle_plugin_update,
                     (
-                        updater_list,
+                        server_folder,
                         plugin_name,
                         plugin_data,
-                        updated_plugins,
-                        old_file,
+                        config.get("updater_settings").data,
+                        updater_list,
                     ),
                 )
             )
+            # worker_jobs.append(
+            #     workers.apply_async(
+            #         update_helper,
+            #         (
+            #             updater_list,
+            #             plugin_name,
+            #             plugin_data,
+            #             updated_plugins,
+            #             old_file,
+            #         ),
+            #     )
+            # )
             # update_helper(
             #     updater_list,
             #     plugin_name,
@@ -240,12 +266,17 @@ def update_plugins(config: Config):
             workers.close()
             workers.join()
 
-        def update_config(config_data):
+        def update_config_helper(config_data):
             for k, v in config_data:
                 config.set(f"plugins.{update_config_path}.{k.strip('.')}", v)
 
-        for plugin_name, new_plugin_data in updated_plugins.items():
+        for job in worker_jobs:
+            result = job.get()
+            if result is None:
+                continue
+            plugin_name, new_plugin_data = result
             status_update(f'[green]Update config for {plugin_name} {new_plugin_data["file"]}')
+
             config.update_plugin_file(plugin_name, new_plugin_data["file"])
             config.update_plugin_version(plugin_name, new_plugin_data["version"])
             config.update_plugin_hashes(plugin_name, **new_plugin_data["hashes"])
@@ -255,10 +286,10 @@ def update_plugins(config: Config):
             update_updater_config = new_plugin_data["update_config"]["updater_config"]
 
             if update_plugin_config:
-                update_config(update_plugin_config)
+                update_config_helper(update_plugin_config)
 
             if update_updater_config:
-                update_config(update_updater_config)
+                update_config_helper(update_updater_config)
 
         config.update_last_update()
         config.save()
