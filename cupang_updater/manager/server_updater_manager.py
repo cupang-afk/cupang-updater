@@ -24,11 +24,15 @@ class ServerUpdaterManager(metaclass=ServerUpdaterManagerSingleton):
 
         self.__updaters: dict[type[ServerUpdaterBase], list[str]] = {}
 
-    def get_updater(self, server_type: str) -> list[type[ServerUpdaterBase]]:
-        result = []
-        for k, v in self.__updaters.items():
-            if server_type in v:
-                result.append(k)
+    def get_supported_type(self) -> list[str]:
+        """get list of server type supported by the registered updater
+
+        Returns:
+            list[str]
+        """
+        result = list(x for y in self.__updaters.values() for x in y)
+        result = list(set(result))
+        result.sort()
         return result
 
     def get_updaters(self, server_type: str) -> list[type[ServerUpdaterBase]]:
