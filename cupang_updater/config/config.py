@@ -3,7 +3,6 @@ from typing import Any
 
 import strictyaml as sy
 
-from ..app.app_config import app_folder
 from ..utils import Date, ensure_path
 from ..utils.special import ensure_yaml_bool_is_true_false
 from .default_config import default_config
@@ -123,13 +122,10 @@ class Config:
         self.config = self.__load__()
 
     @classmethod
-    def create_config(cls, config_path: str | Path = None):
-        if config_path:
-            config_path = ensure_path(config_path)
-        else:
-            config_path = app_folder / "config.yaml"
-        # if config_path.exists():
-        #     raise FileExistsError(f"{config_path} is exists")
+    def create_config(cls, config_path: str | Path):
+        config_path = ensure_path(config_path)
+        if config_path.exists():
+            raise FileExistsError(f"{config_path} is exists")
         config_path.write_text(default_config, encoding="utf-8")
         return cls(config_path)
 

@@ -1,16 +1,17 @@
-import importlib.metadata
+# import importlib.metadata
 import sys
 from argparse import ArgumentParser
 from pathlib import Path
 
-is_pyinstaller = hasattr(sys, "_MEIPASS") or getattr(sys, "frozen", False)
+from ..app.app_config import app_config, is_pyinstaller
+
 opt = ArgumentParser(Path(sys.executable).name if is_pyinstaller else Path(sys.argv[0]).name)
 
-opt.add_argument(
-    "--version",
-    action="version",
-    version="%(prog)s {version}".format(version=importlib.metadata.version("cupang-updater")),
-)
+# opt.add_argument(
+#     "--version",
+#     action="version",
+#     version="%(prog)s {version}".format(version=importlib.metadata.version("cupang-updater")),
+# )
 opt_main_usage = opt.add_argument_group("Main Options")
 opt_main_usage.add_argument(
     "-f",
@@ -27,20 +28,20 @@ opt_main_usage.add_argument(
     default=False,
     help="Scan plugins without checking update (default: %(default)s)",
 )
-opt_main_usage.add_argument(
-    "--config-dir",
-    dest="config_dir",
-    action="store",
-    metavar="PATH",
-    type=Path,
-    help="Set config dir (default: cupang-updater)",
-)
+# opt_main_usage.add_argument(
+#     "--config-dir",
+#     dest="config_dir",
+#     action="store",
+#     metavar="PATH",
+#     type=Path,
+#     help="Set config dir (default: cupang-updater)",
+# )
 opt_main_usage.add_argument(
     "--config",
     dest="config_path",
     action="store",
     metavar="PATH",
-    help="Set config.yaml path relative to the --config-dir unless full path is given (default: config.yaml)",
+    help=f"Set config.yaml path (default: {app_config})",
 )
 
 opt_config_usage = opt.add_argument_group("config options")

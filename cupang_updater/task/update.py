@@ -10,8 +10,9 @@ from typing import Any
 import strictyaml as sy
 from rich.console import Group
 
-from ..app.app_config import app_live, app_progress, app_status, app_stop_event, args
+from ..app.app_config import app_live, app_progress, app_status, app_stop_event
 from ..checker.plugin_checker import jar_info
+from ..cmd.cmd_opt import args
 from ..config import Config
 from ..downloader import download
 from ..logger import LoggerManager

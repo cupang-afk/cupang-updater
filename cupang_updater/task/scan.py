@@ -5,8 +5,9 @@ from typing import Any
 
 import strictyaml as sy
 
-from ..app.app_config import app_status, args
+from ..app.app_config import app_status
 from ..checker import jar_info
+from ..cmd.cmd_opt import args
 from ..config import Config
 from ..logger import LoggerManager
 from ..manager.updater_manager import UpdaterManager

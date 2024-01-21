@@ -1,4 +1,3 @@
-import importlib.metadata
 import importlib.util
 import sys
 from functools import partial
@@ -11,30 +10,16 @@ import rich.progress
 import rich.status
 import rich.traceback
 
-from ..cmd import args
-
 is_pyinstaller = hasattr(sys, "_MEIPASS") or getattr(sys, "frozen", False)
 
 app_name = "cupang-updater"
-app_version = importlib.metadata.version(app_name)
-# app_folder
 if is_pyinstaller:
-    app_folder = Path(sys.executable).parent
+    app_folder = Path(sys.executable).parent / "cupang-updater"
 else:
-    app_folder = Path()
-if args.config_dir:
-    app_folder: Path = args.config_dir
-else:
-    app_folder = app_folder / "cupang-updater"
+    app_folder = Path("cupang-updater")
 app_folder.mkdir(exist_ok=True)
 # app_config
 app_config = app_folder / "config.yaml"
-if args.config_path:
-    _app_config = Path(args.config_path)
-    if not _app_config.is_absolute():
-        app_config = app_folder / _app_config
-    else:
-        app_config = _app_config
 # app_ext_updater
 app_ext_updater = app_folder / "ext_updater"
 

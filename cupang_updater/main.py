@@ -3,7 +3,7 @@ from pathlib import Path
 from rich.prompt import Prompt
 
 from .app.app_config import app_config, app_console, app_ext_updater, app_stop_event
-from .cmd import args
+from .cmd.cmd_opt import args
 from .config import Config
 from .logger import LoggerManager
 from .manager import ExtManager, ServerUpdaterManager, UpdaterManager
