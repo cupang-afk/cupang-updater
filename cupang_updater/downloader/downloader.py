@@ -27,7 +27,8 @@ def dl_core(task_id: rich.progress.TaskID, url, out: IO[bytes], headers: dict[st
             url,
             method="GET",
             headers=headers,
-        )
+        ),
+        timeout=60,
     )
 
     # update total size
@@ -73,6 +74,7 @@ def dl_core_curl(task_id: rich.progress.TaskID, url, out: IO[bytes], headers: di
     curl.setopt(curl.WRITEDATA, out)
     curl.setopt(curl.FOLLOWLOCATION, True)
     curl.setopt(curl.HTTPHEADER, [f"{k}: {v}" for k, v in headers.items()])
+    curl.setopt(curl.CONNECTTIMEOUT, 60)
     curl.setopt(curl.NOPROGRESS, False)
     curl.setopt(curl.XFERINFOFUNCTION, status)
 
