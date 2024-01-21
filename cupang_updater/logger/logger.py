@@ -48,7 +48,7 @@ class LoggerManagerSingleton(type):
 
 class LoggerManager(metaclass=LoggerManagerSingleton):
     def __init__(self):
-        from cupang_updater.app.app_config import log_folder
+        from ..app.app_config import log_folder
 
         self.__today = datetime.now().date()
         self.__name_format = "console_*_*.log"
