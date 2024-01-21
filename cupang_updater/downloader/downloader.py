@@ -175,7 +175,6 @@ def download(url: str, file_name: str = None, headers: dict[str, str] = None):
                 + f"Attempting to retry. {retry + 1} out of {max_retry}\n"
                 + f"[red bold]{type(e).__name__}: [default]{e}",
             )
-            return
     if app_stop_event.is_set():
         return
     return out
