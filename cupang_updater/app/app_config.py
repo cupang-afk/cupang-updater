@@ -22,6 +22,7 @@ app_folder.mkdir(exist_ok=True)
 app_config = app_folder / "config.yaml"
 # app_ext_updater
 app_ext_updater = app_folder / "ext_updater"
+app_ext_updater.mkdir(exist_ok=True)
 
 log_folder = app_folder / "logs"
 log_folder.mkdir(exist_ok=True)
