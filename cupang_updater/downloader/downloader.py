@@ -64,6 +64,8 @@ def dl_core_curl(task_id: rich.progress.TaskID, url, out: IO[bytes], headers: di
         return
 
     # setup curl
+    import pycurl
+
     curl = pycurl.Curl()  # type: ignore # noqa
 
     # set option
