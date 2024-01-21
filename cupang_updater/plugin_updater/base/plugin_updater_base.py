@@ -1,5 +1,5 @@
 from abc import abstractmethod
-from typing import Any
+from typing import Any, final
 
 from strictyaml import ScalarValidator
 
@@ -93,6 +93,13 @@ class PluginUpdaterBase(UpdaterBase):
         Note: If `updater_config_schema` is a mapping type, this should be YAML string format.
         """
         ...
+
+    @final
+    def register(self):
+        """Register this updater"""
+        from ...manager import UpdaterManager
+
+        UpdaterManager().register(self)
 
     @abstractmethod
     def check_update(

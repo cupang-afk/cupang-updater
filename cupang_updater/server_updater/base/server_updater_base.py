@@ -1,4 +1,5 @@
 from abc import abstractmethod
+from typing import final
 
 from ...base_class import UpdaterBase
 from ...utils.hash import FileHash
@@ -41,6 +42,13 @@ class ServerUpdaterBase(UpdaterBase):
         example: ["paper"]
         """
         ...
+
+    @final
+    def register(self):
+        """Register this updater"""
+        from ...manager import ServerUpdaterManager
+
+        ServerUpdaterManager().register(self)
 
     @abstractmethod
     def check_update(
