@@ -3,8 +3,6 @@ from ..logger.logger import LoggerManager
 from ..server_updater import ServerUpdaterBase
 from ..utils.special import ensure_yaml_bool_is_true_false
 
-log = LoggerManager().get_log()
-
 
 class ServerUpdaterManagerSingleton(type):
     _instances = {}
@@ -58,6 +56,7 @@ class ServerUpdaterManager(metaclass=ServerUpdaterManagerSingleton):
             ValueError: cls should inherit `ServerUpdaterBase` and initialized
         """
 
+        log = LoggerManager().get_log()
         log.info(f"Registering server updater {cls.name}")
         if not isinstance(cls, ServerUpdaterBase):
             raise ValueError(f"cls should inherit {ServerUpdaterBase.__qualname__}")

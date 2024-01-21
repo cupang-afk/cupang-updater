@@ -17,8 +17,6 @@ from ..app.app_config import (
 )
 from ..logger import LoggerManager
 
-log = LoggerManager().get_log()
-
 
 def dl_core(task_id: rich.progress.TaskID, url, out: IO[bytes], headers: dict[str, str]) -> None:
     CHUNK_SIZE = 8 * 1024
@@ -89,6 +87,7 @@ def dl_core_curl(task_id: rich.progress.TaskID, url, out: IO[bytes], headers: di
 
 
 def get_dl_worker():
+    log = LoggerManager().get_log()
     if app_has_pycurl:
         try:
             import pycurl  # type: ignore # noqa
@@ -108,6 +107,8 @@ def dl(
     progress_name: str = None,
     headers: dict[str, str] = None,
 ) -> None:
+    log = LoggerManager().get_log()
+
     # setup headers
     if not headers:
         headers = {}
@@ -152,6 +153,7 @@ def download(url: str, file_name: str = None, headers: dict[str, str] = None):
     """
     return path of the file in cache folder, if fail then return None
     """
+    log = LoggerManager().get_log()
     retry = 0
     max_retry = 10
     task_id = app_progress.add_task(description="", total=None, visible=False)

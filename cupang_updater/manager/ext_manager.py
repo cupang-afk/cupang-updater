@@ -6,8 +6,6 @@ from pathlib import Path
 from ..logger import LoggerManager
 from ..utils import ensure_path
 
-log = LoggerManager().get_log()
-
 
 class ExtManagerSingleton(type):
     _instances = {}
@@ -30,6 +28,7 @@ class ExtManager(metaclass=ExtManagerSingleton):
         spec.loader.exec_module(module)
 
     def register(self, *ext_paths: Path | str):
+        log = LoggerManager().get_log()
         if self.__registered:
             log.error("Ext already registered")
             return

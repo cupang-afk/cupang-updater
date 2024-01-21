@@ -8,8 +8,6 @@ from ..plugin_updater import PluginUpdaterBase
 from ..utils import reindent
 from ..utils.special import ensure_yaml_bool_is_true_false
 
-log = LoggerManager().get_log()
-
 
 class UpdaterManagerSingleton(type):
     _instances = {}
@@ -80,6 +78,7 @@ class UpdaterManager(metaclass=UpdaterManagerSingleton):
         Note: The provided `cls` instance should be initialized before registration.
         """
 
+        log = LoggerManager().get_log()
         log.info(f"Registering updater {cls.name}")
         if not isinstance(cls, PluginUpdaterBase):
             raise ValueError(f"cls should be initialized, and inherit {PluginUpdaterBase.__qualname__}")
