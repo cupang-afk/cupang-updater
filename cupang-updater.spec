@@ -21,7 +21,7 @@ exe = EXE(
     a.binaries,
     a.datas,
     [],
-    name='cupang-updater',
+    name='cupang-updater-bin',
     debug=False,
     bootloader_ignore_signals=False,
     strip=False,
