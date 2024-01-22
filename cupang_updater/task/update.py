@@ -209,7 +209,7 @@ def update_plugins(config: Config):
         workers = ThreadPool(5)
         worker_jobs: list[ApplyResult] = []
 
-        status_update("Adding update bobs")
+        status_update("Adding update jobs")
         for plugin_name, plugin_data in plugins.items():
             status_update(f"Adding job for {plugin_name}", log_type="debug")
 
