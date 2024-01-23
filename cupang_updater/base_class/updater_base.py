@@ -1,8 +1,8 @@
-import http.client
 import urllib.error
 from abc import ABC, abstractmethod
+from http.client import HTTPResponse
 from logging import Logger
-from typing import Any, Callable, final
+from typing import Callable, final
 
 from packaging.version import Version
 
@@ -16,7 +16,8 @@ class UpdaterBase(ABC):
 
     Warning:
         Shouldn't use this outside of internal usage as this don't serve any purpose.
-        Use `cupang_updater.updater.PluginManagerBase` instead.
+        Use `cupang_updater.plugin_updater.PluginUpdaterBase` instead.
+        Or `cupang_updater.server_updater.ServerUpdaterBase`
 
     Note:
         Provides a framework for creating updaters with required functions
@@ -64,7 +65,7 @@ class UpdaterBase(ABC):
         """
         ...
 
-    def get_headers(self) -> dict[str, Any]:
+    def get_headers(self) -> dict[str, str]:
         """
         Return headers to be use when downloading file
 
@@ -96,13 +97,26 @@ class UpdaterBase(ABC):
 
     @final
     def make_requests(
-        self, url: str, method: str = "GET", headers: dict[str, str] = None
-    ) -> http.client.HTTPResponse | None:
-        """Safely create a request using urllib.request.
+        self,
+        url: str,
+        *,
+        method: str = "GET",
+        headers: dict[str, str] = None,
+        condition: Callable[[HTTPResponse], bool] = None,
+    ) -> HTTPResponse | None:
+        """Safely create a request using urllib.request
 
-        Recommended to use this method instead of creating a new one.
+        Recommended to use this method instead of creating a new one
 
-        Return A HTTPResponse object if successful, otherwise None.
+        Args:
+            url (str): The URL for the request.
+            method (str, optional): The HTTP method for the request. Defaults to "GET".
+            headers (dict[str, str], optional): Additional headers for the request. Defaults to None.
+            condition (Callable[[HTTPResponse], bool], optional): A callable that takes an HTTPResponse object and returns a boolean.
+                    Defaults to None.
+
+        Returns:
+            HTTPResponse | None: The HTTPResponse object if successful and the condition (if provided) is met, otherwise None.
         """
 
         try:
@@ -114,6 +128,9 @@ class UpdaterBase(ABC):
                 f"Executed with arguments (url={url}, method={method}, headers={headers})"
             )
             return
+        if condition is not None:
+            if not condition(res):
+                return
         return res
 
     @final

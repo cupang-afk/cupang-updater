@@ -1,6 +1,5 @@
 import json
 from http import HTTPStatus
-from http.client import HTTPResponse
 from typing import Any
 
 import strictyaml as sy
@@ -83,10 +82,9 @@ class GithubUpdater(PluginUpdaterBase):
         res_release = self.make_requests(
             self.make_url(self.api_url, "repos", repo, "releases", "latest"),
             headers=headers,
+            condition=lambda res: HTTPStatus(res.getcode()) == HTTPStatus.OK
+            and res.getheader("content-type", "").split(";", 1)[0].lower() == headers["Accept"].lower(),
         )
-
-        # Check the response and handle errors
-        res_release = self.check_response(res_release, headers)
         if res_release is None:
             return None
         release_data = json.loads(res_release.read())
@@ -104,8 +102,6 @@ class GithubUpdater(PluginUpdaterBase):
             ),
             headers=headers,
         )
-        # Check the response and handle errors
-        res_tag = self.check_response(res_tag, headers)
         if res_tag is None:
             return None
         tag_data = json.loads(res_tag.read())
@@ -125,30 +121,6 @@ class GithubUpdater(PluginUpdaterBase):
         except Exception:
             return
         return file_data
-
-    def check_response(self, res: HTTPResponse | None, headers: dict) -> HTTPResponse | None:
-        # Check the HTTP response for errors and return the response or None
-        if res is None:
-            self.get_log().error(f"Failed to fetch data for {self.plugin_name} because response is empty")
-            return
-
-        res_code = HTTPStatus(res.getcode())
-        if res_code != HTTPStatus.OK:
-            self.get_log().error(
-                f"Failed to fetch data for {self.plugin_name} " f"because {res_code.value} {res_code.phrase}"
-            )
-            return
-
-        content_type = res.getheader("content-type")
-        if content_type is None:
-            self.get_log().error(f"Requesting {headers['Accept']} for {self.plugin_name} but got None")
-            return
-
-        # Check if the content type matches the expected value
-        if headers["Accept"] not in content_type.split(";"):
-            self.get_log().error(f"Requesting {headers['Accept']} for {self.plugin_name} " f"but got {content_type}")
-            return
-        return res
 
     def check_update(
         self,

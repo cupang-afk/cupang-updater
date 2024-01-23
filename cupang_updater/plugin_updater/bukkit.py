@@ -1,7 +1,6 @@
 import json
 import re
 from http import HTTPStatus
-from http.client import HTTPResponse
 from typing import Any
 
 import strictyaml as sy
@@ -48,10 +47,9 @@ class BukkitUpdater(PluginUpdaterBase):
         res = self.make_requests(
             self.make_url(self.api_url, "files", projectIds=project_id),
             headers=headers,
+            condition=lambda res: HTTPStatus(res.getcode()) == HTTPStatus.OK
+            and res.getheader("content-type", "").split(";", 1)[0].lower() == headers["Accept"].lower(),
         )
-
-        # Check the response and handle errors
-        res = self.check_response(res, headers)
         if res is None:
             return None
 
@@ -69,30 +67,6 @@ class BukkitUpdater(PluginUpdaterBase):
 
         # Set update_data to the latest release
         return date_sorted_project_data[max(date_sorted_project_data.keys())]
-
-    def check_response(self, res: HTTPResponse | None, headers: dict) -> HTTPResponse | None:
-        # Check the HTTP response for errors and return the response or None
-        if res is None:
-            self.get_log().error(f"Failed to fetch data for {self.plugin_name} because response is empty")
-            return
-
-        res_code = HTTPStatus(res.getcode())
-        if res_code != HTTPStatus.OK:
-            self.get_log().error(
-                f"Failed to fetch data for {self.plugin_name} " f"because {res_code.value} {res_code.phrase}"
-            )
-            return
-
-        content_type = res.getheader("content-type")
-        if content_type is None:
-            self.get_log().error(f"Requesting {headers['Accept']} for {self.plugin_name} but got None")
-            return
-
-        # Check if the content type matches the expected value
-        if headers["Accept"] not in content_type.split(";"):
-            self.get_log().error(f"Requesting {headers['Accept']} for {self.plugin_name} " f"but got {content_type}")
-            return
-        return res
 
     def check_update(
         self,

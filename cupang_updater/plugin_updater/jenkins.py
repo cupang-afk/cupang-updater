@@ -1,6 +1,5 @@
 import json
 from http import HTTPStatus
-from http.client import HTTPResponse
 from typing import Any
 
 import strictyaml as sy
@@ -62,10 +61,9 @@ class JenkinsUpdater(PluginUpdaterBase):
         res_latest_build = self.make_requests(
             self.make_url(jenkins_url, self.api_path, **self.last_successful_build_param),
             headers=headers,
+            condition=lambda res: HTTPStatus(res.getcode()) == HTTPStatus.OK
+            and res.getheader("content-type", "").split(";", 1)[0].lower() == headers["Accept"].lower(),
         )
-
-        # Check the response and handle errors
-        res_latest_build = self.check_response(res_latest_build, headers)
         if res_latest_build is None:
             return None
         latest_build_data = json.loads(res_latest_build.read())
@@ -74,8 +72,9 @@ class JenkinsUpdater(PluginUpdaterBase):
         res_artifact = self.make_requests(
             self.make_url(latest_build_data["lastSuccessfulBuild"]["url"], self.api_path),
             headers=headers,
+            condition=lambda res: HTTPStatus(res.getcode()) == HTTPStatus.OK
+            and res.getheader("content-type", "").split(";", 1)[0].lower() == headers["Accept"].lower(),
         )
-        res_artifact = self.check_response(res_artifact, headers)
         if res_artifact is None:
             return None
 
@@ -95,30 +94,6 @@ class JenkinsUpdater(PluginUpdaterBase):
         except Exception:
             return
         return file_data
-
-    def check_response(self, res: HTTPResponse | None, headers: dict) -> HTTPResponse | None:
-        # Check the HTTP response for errors and return the response or None
-        if res is None:
-            self.get_log().error(f"Failed to fetch data for {self.plugin_name} because response is empty")
-            return
-
-        res_code = HTTPStatus(res.getcode())
-        if res_code != HTTPStatus.OK:
-            self.get_log().error(
-                f"Failed to fetch data for {self.plugin_name} " f"because {res_code.value} {res_code.phrase}"
-            )
-            return
-
-        content_type = res.getheader("content-type")
-        if content_type is None:
-            self.get_log().error(f"Requesting {headers['Accept']} for {self.plugin_name} but got None")
-            return
-
-        # Check if the content type matches the expected value
-        if headers["Accept"] not in content_type.split(";"):
-            self.get_log().error(f"Requesting {headers['Accept']} for {self.plugin_name} " f"but got {content_type}")
-            return
-        return res
 
     def check_update(
         self,
@@ -172,6 +147,7 @@ class JenkinsUpdater(PluginUpdaterBase):
         check_file = self.check_head(
             self.url,
             condition=lambda res: res.getheader("content-type", "").lower()
+            in ["application/java-archive", "application/zip"],
         )
         if not check_file:
             self.get_log().error(f"When checking update for {self.plugin_name} got url {self.url} but its not a file")
