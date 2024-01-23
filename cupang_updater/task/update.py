@@ -74,7 +74,7 @@ def handle_server_update(
             if new_file is None:
                 log.error(f"Trying another server updater for {server_type}")
                 continue
-            shutil.move(new_file.absolute(), (server_folder / server_file).absolute())
+            new_file = Path(shutil.move(new_file.absolute(), (server_folder / server_file).absolute()))
             return updater.get_build_number(), FileHash(new_file)
     return
 
