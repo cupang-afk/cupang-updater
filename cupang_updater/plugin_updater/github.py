@@ -217,9 +217,11 @@ class GithubUpdater(PluginUpdaterBase):
         self.url = url
 
         # Check the file URL for any issues
-        check_file = self.check_file_url(self.url)
-        if check_file is not None:
-            self.get_log().error(f"When try to check url for {self.plugin_name}, got error: [bold red]{check_file}")
+        check_file = self.check_head(
+            self.url, condition=lambda res: res.getheader("content-type", "").lower() == "application/octet-stream"
+        )
+        if not check_file:
+            self.get_log().error(f"When checking update for {self.plugin_name} got url {self.url} but its not a file")
             return False
 
         self.commit = remote_commit

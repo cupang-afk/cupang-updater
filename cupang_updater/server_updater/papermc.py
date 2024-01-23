@@ -100,11 +100,18 @@ class PaperUpdater(ServerUpdaterBase):
             "downloads",
             f"{self.server_name}-{server_version}-{remote_build_number}.jar",
         )
-        check_file = self.check_file_url(url)
-        if check_file is not None:
-            self.get_log().error(f"When try to check url for {self.server_name}, got error: [bold red]{check_file}")
-            return False
         self.url = url
+
+        # Check the file URL for any issues
+        check_file = self.check_head(
+            self.url,
+            condition=lambda res: res.getheader("content-type", "").lower()
+        )
+        if not check_file:
+            self.get_log().error(
+                f"When checking update for {server_type} using {self.name} got url {self.url} but its not a file"
+            )
+            return False
 
         self.build_number = remote_build_number
         return True

@@ -2,7 +2,7 @@ import http.client
 import urllib.error
 from abc import ABC, abstractmethod
 from logging import Logger
-from typing import Any, final
+from typing import Any, Callable, final
 
 from packaging.version import Version
 
@@ -117,28 +117,31 @@ class UpdaterBase(ABC):
         return res
 
     @final
-    @staticmethod
-    def check_file_url(url: str) -> str | None:
-        """Return None if the URL points to a file, otherwise return an error message as a string."""
-        try:
-            res = make_requests(url, method="HEAD")
-        except Exception as e:
-            return str(e)
+    def check_head(
+        self,
+        url: str,
+        *,
+        headers: dict[str, str] = None,
+        condition: Callable[[HTTPResponse], bool],
+    ) -> bool:
+        """Check the header of a URL, for example, to verify if it points to a file
 
-        content_type = res.getheader("content-type")
-        if content_type is None:
-            return "Content-Type is None"
+        Args:
+            url (str): The URL to check
+            condition (Callable[[HTTPResponse], bool]): A callable that takes an HTTPResponse object and returns a boolean
 
-        allowed_content_types = [
-            "application/java-archive",  # common
-            "application/octet-stream",  # github
-            "application/zip",  # for some reason serverjars.com does this
-        ]
+        Returns:
+            bool: True if the check passed, False otherwise.
+        """
 
-        if not any(x.lower() in content_type.lower() for x in allowed_content_types):
-            return f"Content-Type is {content_type}"
+        res = self.make_requests(url, method="HEAD", headers=headers)
+        if res is None:
+            return False
 
-        return
+        if not condition(res):
+            return False
+
+        return True
 
     @final
     @staticmethod

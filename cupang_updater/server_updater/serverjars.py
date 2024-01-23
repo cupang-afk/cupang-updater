@@ -115,10 +115,18 @@ class ServerjarsUpdater(ServerUpdaterBase):
             self.server_category,
             f"{self.server_name}{f'/{server_version}' if server_version else ''}",
         )
-        check_file = self.check_file_url(url)
-        if check_file is not None:
-            self.get_log().error(f"When try to check url for {self.server_name}, got error: [bold red]{check_file}")
-            return False
         self.url = url
+
+        # Check the file URL for any issues
+        check_file = self.check_head(
+            self.url,
+            condition=lambda res: res.getheader("content-type", "").lower()
+            in ["application/java-archive", "application/zip"],
+        )
+        if not check_file:
+            self.get_log().error(
+                f"When checking update for server using {self.name} got url {self.url} but its not a file"
+            )
+            return False
 
         return True
