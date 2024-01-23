@@ -1,6 +1,6 @@
 A Mincraft plugin downloader
 
-This project are still undergoing
+This project are still undergoing the version will stay at 0.1.0 until i feel okay
 
 ### Install
 
@@ -213,3 +213,10 @@ example flow
 > ```bash
 > $ pyinstaller cupang-updater.spec -- --extra-hidden-import modules
 > ```
+
+### TODO
+
+- [ ] create error class as i usually use Exception all over the place which is bad idea
+- [ ] make `--config-dir` work again because of [fb7bae7](https://github.com/cupang-afk/cupang-updater/commit/fb7bae71eaa750edabef9213f7798cb4a1ac9a37)
+- [ ] make [ExtManager.register](cupang_updater/manager/ext_manager.py) more secure
+- [ ] make use [PEP 621](https://peps.python.org/pep-0621/)
