@@ -207,3 +207,9 @@ example flow
 
 > [!NOTE]
 > your ext_updater cannot use 3rd party modules because the binary cannot import 3rd party modules from your python site-packages, unless you add it using --hidden-import
+>
+> by using cupang-updater.spec file you can add it by adding argument
+>
+> ```bash
+> $ pyinstaller cupang-updater.spec -- --extra-hidden-import modules
+> ```
