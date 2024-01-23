@@ -61,9 +61,9 @@ class NonEmptyStr(sy.Str):
 class HangarUpdater(PluginUpdaterBase):
     name = "Hangar"
     config_path = "hangar"
-    plugin_config_schema = sy.Map({"id": sy.EmptyNone() | sy.Str(),
-                                   "platform": sy.EmptyNone() | PlatformType(),
-                                   "channel": NonEmptyStr()})
+    plugin_config_schema = sy.Map(
+        {"id": sy.EmptyNone() | sy.Str(), "platform": sy.EmptyNone() | PlatformType(), "channel": NonEmptyStr()}
+    )
     plugin_config_default = """
         # id: https://hangar.papermc.io/[author]/[your project id here]
         # platform: one of these, paper, waterfall, velocity
@@ -80,7 +80,7 @@ class HangarUpdater(PluginUpdaterBase):
         self.plugin_version = None
         self.plugin_hash = None
 
-        self.url:str  = None
+        self.url: str = None
 
     def get_plugin_name(self) -> str:
         # Return the plugin name
@@ -100,8 +100,9 @@ class HangarUpdater(PluginUpdaterBase):
         res_release = self.make_requests(
             self.make_url(self.api_url, project_id, "latest", channel=channel),
             headers=headers,
+            condition=lambda res: HTTPStatus(res.getcode()) == HTTPStatus.OK
+            and res.getheader("content-type", "").split(";", 1)[0].lower() == headers["Accept"].lower(),
         )
-        res_release = self.check_response(res_release, headers)
         if res_release is None:
             return None
 
@@ -112,42 +113,23 @@ class HangarUpdater(PluginUpdaterBase):
         res_latest = self.make_requests(
             self.make_url(self.api_url, project_id, "versions", latest_version),
             headers=headers,
+            condition=lambda res: HTTPStatus(res.getcode()) == HTTPStatus.OK
+            and res.getheader("content-type", "").split(";", 1)[0].lower() == headers["Accept"].lower(),
         )
-
-        # Check the response and handle errors
-        res_latest = self.check_response(res_latest, headers)
         if res_latest is None:
             return None
 
         res_latest = json.loads(res_latest.read())
         return res_latest
 
-
-    def check_response(self, res: HTTPResponse | None, headers: dict) -> HTTPResponse | None:
-        # Check the HTTP response for errors and return the response or None
-        if res is None:
-            self.get_log().error(f"Failed to fetch data for {self.plugin_name} because response is empty")
-            return
-
-        res_code = HTTPStatus(res.getcode())
-        if res_code != HTTPStatus.OK:
-            self.get_log().error(
-                f"Failed to fetch data for {self.plugin_name} " f"because {res_code.value} {res_code.phrase}"
-            )
-            return
-
-        content_type = res.getheader("content-type")
-        if content_type is None:
-            self.get_log().error(f"Requesting {headers['Accept']} for {self.plugin_name} but got None")
-            return
-
-        # Check if the content type matches the expected value
-        if headers["Accept"] not in content_type.split(";"):
-            self.get_log().error(f"Requesting {headers['Accept']} for {self.plugin_name} " f"but got {content_type}")
-            return
-        return res
-
-    def check_update(self, plugin_name: str, plugin_version: str, plugin_hash: FileHash, plugin_config: dict[str, str] | Any, updater_config: dict[str, str] | Any | None = None) -> bool:
+    def check_update(
+        self,
+        plugin_name: str,
+        plugin_version: str,
+        plugin_hash: FileHash,
+        plugin_config: dict[str, str] | Any,
+        updater_config: dict[str, str] | Any | None = None,
+    ) -> bool:
         self.plugin_name = plugin_name
         self.plugin_version = plugin_version
         self.plugin_hash = plugin_hash
@@ -168,11 +150,18 @@ class HangarUpdater(PluginUpdaterBase):
         if local_version >= remote_version:
             return False
 
-        self.url = self.make_url(self.api_url, project_id, "versions", project_data["name"], project_platform.upper(), "download")
+        self.url = self.make_url(
+            self.api_url, project_id, "versions", project_data["name"], project_platform.upper(), "download"
+        )
 
-        check_file = self.check_file_url(self.url)
-        if check_file is not None:
-            self.get_log().error(f"When try to check url for {self.plugin_name}, got error: [bold red]{check_file}")
+        # Check the file URL for any issues
+        check_file = self.check_head(
+            self.url,
+            condition=lambda res: res.getheader("content-type", "").lower()
+            in ["application/java-archive", "application/zip"],
+        )
+        if not check_file:
+            self.get_log().error(f"When checking update for {self.plugin_name} got url {self.url} but its not a file")
             return False
 
         self.plugin_version = str(project_data["name"])
