@@ -91,7 +91,6 @@ class SpigotUpdater(PluginUpdaterBase):
         local_version = self.parse_version(plugin_version)
         remote_version = self.parse_version(resource_latest["name"])
         if local_version >= remote_version:
-            self.get_log().info(remote_version)
             return False
 
         # Check if the plugin is marked as premium

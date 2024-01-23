@@ -107,8 +107,8 @@ def handle_plugin_update(
                 plugin_config,
                 updater_config,
             )
-        except Exception as e:
-            log.error(f"When trying to update {plugin_name} using {updater.name}\n" f"got error: [bold red]{e}")
+        except Exception:
+            updater.get_log().exception(f"Error trying to update {plugin_name}")
             continue
         if check_update:
             new_version = updater.get_plugin_version()
