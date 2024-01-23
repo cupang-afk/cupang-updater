@@ -32,7 +32,7 @@ default_config = dedent(
       type: purpur
       version: 1.19.4 # a version number like 1.20.4
       build_number: # if you change server.version, empty this
-      custom_download_url:
+      custom_download_url: # not implemented yet
       hashes:
         md5:
         sha1:
