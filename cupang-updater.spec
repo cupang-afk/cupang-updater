@@ -1,12 +1,16 @@
 # -*- mode: python ; coding: utf-8 -*-
+import argparse
 
+opt = argparse.ArgumentParser(add_help=False)
+opt.add_argument("--extra-hidden-import", "--extrahiddenimport", dest="hidden_imports", default=[], action="append")
+args, _ = opt.parse_known_args()
 
 a = Analysis(
-    ['cli.py'],
+    ["..\\cli.py"],
     pathex=[],
     binaries=[],
     datas=[],
-    hiddenimports=['cloudpickle', 'pycurl'],
+    hiddenimports=["pycurl"] + args.hidden_imports,
     hookspath=[],
     hooksconfig={},
     runtime_hooks=[],
@@ -21,7 +25,7 @@ exe = EXE(
     a.binaries,
     a.datas,
     [],
-    name='cupang-updater-bin',
+    name="cupang-updater-bin",
     debug=False,
     bootloader_ignore_signals=False,
     strip=False,
