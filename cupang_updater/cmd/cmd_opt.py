@@ -41,6 +41,8 @@ opt_main_usage.add_argument(
     dest="config_path",
     action="store",
     metavar="PATH",
+    default=app_config,
+    type=Path,
     help=f"Set config.yaml path (default: {app_config})",
 )
 

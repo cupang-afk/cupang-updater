@@ -2,8 +2,7 @@ from pathlib import Path
 
 from rich.prompt import Prompt
 
-from .app.app_config import app_config, app_console, app_ext_updater, app_stop_event
-from .cmd.cmd_opt import args
+from .app.app_config import app_console, app_ext_updater, app_stop_event
 from .config import Config
 from .logger import LoggerManager
 from .manager import ExtManager, ServerUpdaterManager, UpdaterManager
@@ -21,6 +20,8 @@ from .task.update import update_plugins
 
 
 def main():
+    from .cmd.cmd_opt import args
+
     try:
         log = LoggerManager().get_log()
         s = ServerUpdaterManager()
@@ -41,11 +42,11 @@ def main():
 
         e.register(app_ext_updater)
 
-        log.info("Loading config")
-        if not app_config.exists():
-            c = Config.create_config(app_config)
+        log.info(f"Loading config {args.config_path}")
+        if not args.config_path.exists():
+            c = Config.create_config(args.config_path)
         else:
-            c = Config(app_config)
+            c = Config(args.config_path)
         if not c.get("settings.server_folder").data:
             while True:
                 server_folder = Prompt.ask(
