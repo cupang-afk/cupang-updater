@@ -115,20 +115,19 @@ class JenkinsUpdater(PluginUpdaterBase):
         # Extract name_startwith from plugin configuration
         name_startwith = plugin_config.get("name_startwith")
         if name_startwith is None:
-            self.get_log().error(f"name_starwith {name_startwith}")
+            self.get_log().error(f"Error for {self.plugin_name} because name_startwith is {name_startwith}")
             return False
 
         # Retrieve update data from Jenkins
         update_data = self.get_update_data(jenkins_url)
         if not update_data:
-            self.get_log().error(f"update_data {update_data}")
             return False
 
         # Extract local and remote build numbers
-        local_build_number = plugin_config.get("build_number", 0)
+        local_build_number = plugin_config.get("build_number") or 0
+        local_build_number = int(local_build_number)
         remote_build_number = int(update_data["number"])
         if local_build_number >= remote_build_number:
-            self.get_log().error("a")
             return False
 
         # Retrieve file information based on name_startwith
@@ -147,7 +146,7 @@ class JenkinsUpdater(PluginUpdaterBase):
         check_file = self.check_head(
             self.url,
             condition=lambda res: res.getheader("content-type", "").lower()
-            in ["application/java-archive", "application/zip"],
+            in ["application/java-archive", "application/octet-stream", "application/zip"],
         )
         if not check_file:
             self.get_log().error(f"When checking update for {self.plugin_name} got url {self.url} but its not a file")

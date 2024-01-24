@@ -76,8 +76,12 @@ def scan_plugins(config: Config) -> None | Any:
             name, version, authors = jar_info(jar)
             default_plugin_data = updater_manager.get_plugin_default()
 
-            if plugins_config.get(name) is not None:
-                if hash.md5() == plugins_config[name]["hashes"]["md5"]:
+            log.info(f"[green]Update config for {name} [cyan]{jar.name}")
+            if plugins_config.get(name, sy.YAML(None, sy.EmptyNone())).data is not None:
+                if (
+                    hash.md5() == plugins_config[name]["hashes"]["md5"].data
+                    and jar.name == plugins_config[name]["file"].data
+                ):
                     continue
             else:
                 is_new_plugin = True
@@ -86,7 +90,10 @@ def scan_plugins(config: Config) -> None | Any:
             # this is because "preserve comments" thing
             # YAML object can hold comments but dict can't
             # and i don't know how tf to add comments directly
-            if not plugins_config.get(name):
+            #
+            # if the config for plugin is exists then updating will be slow (cuz the validation stuff)
+            # otherwise it will be fast
+            if not plugins_config.get(name, sy.YAML(None, sy.EmptyNone())).data:
                 plugin_data: sy.YAML = default_plugin_data
             else:
                 plugin_data = plugins_config[name]
@@ -102,7 +109,6 @@ def scan_plugins(config: Config) -> None | Any:
             plugin_hashes["sha512"] = hash.sha512()
 
             plugins_config[name] = plugin_data
-            log.info(f"[green]Update config for {name} [cyan]{jar.name}")
 
         status_update("Finished scanning plugins")
 
@@ -127,7 +133,7 @@ def scan_plugins(config: Config) -> None | Any:
         # pass to the config
         # this process is much faster thab
         # inserting one by one to the YAML object directly
-        status_update("Updating config file")
+        status_update("Updating config")
         sorted_key = sorted(plugins_config.keys(), key=lambda k: k.lower())
         _plugins_as_yaml: str = "plugins:\n"
         for i in sorted_key:

@@ -57,6 +57,8 @@ def handle_server_update(
 
     updater_list: list[type[ServerUpdaterBase]] = ServerUpdaterManager().get_updaters(server_type)
     for updater in updater_list:
+        if app_stop_event.is_set():
+            break
         updater = updater()
         try:
             check_update = updater.check_update(
@@ -65,8 +67,10 @@ def handle_server_update(
                 server_hash,
                 server_build_number,
             )
-        except Exception as e:
-            log.error(f"When trying to update server using {updater.name}\n" f"got error: [bold red]{e}")
+        except Exception:
+            updater.get_log().exception("Error when trying to update")
+            log.error(f"Trying another server updater for {server_type}")
+            continue
 
         if check_update:
             status_update(f"Updating {server_type} {server_version}", no_log=True)
@@ -93,6 +97,8 @@ def handle_plugin_update(
     plugin_hash = FileHash.with_known_hashes(plugin_file, plugin_data["hashes"])
 
     for updater in updater_list:
+        if app_stop_event.is_set():
+            break
         updater = updater()
         # the updater config, but in plugins section
         plugin_config = deepcopy([plugin_data[updater.config_path]])[0]
@@ -108,7 +114,8 @@ def handle_plugin_update(
                 updater_config,
             )
         except Exception:
-            updater.get_log().exception(f"Error trying to update {plugin_name}")
+            updater.get_log().exception(f"Error when trying to update {plugin_name}")
+            log.error(f"Trying another plugin updater for {updater.get_plugin_name()}")
             continue
         if check_update:
             new_version = updater.get_plugin_version()
@@ -219,10 +226,10 @@ def update_plugins(config: Config):
             # also checking old_file existence to fulfill keep_removed_plugin behaviour
             if plugin_data.get("exclude", True):
                 log.info(f"Excluding {plugin_name}")
-                return
+                continue
             if not old_file.exists():
                 log.info(f"Skipping {plugin_name}, because its a leftover")
-                return
+                continue
 
             # add download job
             worker_jobs.append(
@@ -259,7 +266,7 @@ def update_plugins(config: Config):
 
         status_update("Jobs added, waiting for completion")
         try:
-            while not all([x.ready() for x in worker_jobs]):
+            while not all([x.ready() for x in worker_jobs]) and not app_stop_event.is_set():
                 time.sleep(1)
         except (KeyboardInterrupt, ProcessError, Exception):
             app_stop_event.set()
@@ -271,12 +278,13 @@ def update_plugins(config: Config):
             for k, v in config_data:
                 config.set(f"plugins.{update_config_path}.{k.strip('.')}", v)
 
+        status_update("Updating config")
         for job in worker_jobs:
             result = job.get()
             if result is None:
                 continue
             plugin_name, new_plugin_data = result
-            status_update(f'[green]Update config for {plugin_name} {new_plugin_data["file"]}')
+            log.info(f'[green]Update config for {plugin_name} [cyan]{new_plugin_data["file"]}')
 
             config.update_plugin_file(plugin_name, new_plugin_data["file"])
             config.update_plugin_version(plugin_name, new_plugin_data["version"])

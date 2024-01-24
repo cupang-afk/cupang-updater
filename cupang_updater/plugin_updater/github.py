@@ -78,7 +78,7 @@ class GithubUpdater(PluginUpdaterBase):
         # Perform GET request for release data
         headers = {"Accept": "application/json"}
         if self.token:
-            headers + self.get_headers()
+            headers.update(self.get_headers())
         res_release = self.make_requests(
             self.make_url(self.api_url, "repos", repo, "releases", "latest"),
             headers=headers,

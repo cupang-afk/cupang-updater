@@ -42,7 +42,7 @@ def main():
 
         e.register(app_ext_updater)
 
-        log.info(f"Loading config {args.config_path}")
+        log.info(f"Loading config {args.config_path.name}")
         if not args.config_path.exists():
             c = Config.create_config(args.config_path)
         else:

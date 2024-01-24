@@ -105,7 +105,7 @@ class BukkitUpdater(PluginUpdaterBase):
         check_file = self.check_head(
             self.url,
             condition=lambda res: res.getheader("content-type", "").lower()
-            in ["application/java-archive", "application/zip"],
+            in ["application/java-archive", "application/octet-stream", "application/zip"],
         )
         if not check_file:
             self.get_log().error(f"When checking update for {self.plugin_name} got url {self.url} but its not a file")

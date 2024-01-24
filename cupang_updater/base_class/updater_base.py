@@ -123,7 +123,7 @@ class UpdaterBase(ABC):
             res = make_requests(url, method=method, headers=headers)
         except (urllib.error.URLError, urllib.error.HTTPError, Exception) as e:
             self.get_log().error(
-                f"Error while requesting data from {url}\n    "
+                f"Error while requesting data from {url}\n"
                 f"{type(e).__qualname__}: {e}\n"
                 f"Executed with arguments (url={url}, method={method}, headers={headers})"
             )
