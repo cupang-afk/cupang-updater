@@ -63,7 +63,7 @@ def main():
 
         if args.scan_only:
             scan_plugins(c)
-            exit()
+            return
         else:
             scan_plugins(c)
             update_plugins(c)
