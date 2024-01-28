@@ -76,7 +76,6 @@ def scan_plugins(config: Config) -> None | Any:
             name, version, authors = jar_info(jar)
             default_plugin_data = updater_manager.get_plugin_default()
 
-            log.info(f"[green]Update config for {name} [cyan]{jar.name}")
             if plugins_config.get(name, sy.YAML(None, sy.EmptyNone())).data is not None:
                 if (
                     hash.md5() == plugins_config[name]["hashes"]["md5"].data
@@ -93,6 +92,7 @@ def scan_plugins(config: Config) -> None | Any:
             #
             # if the config for plugin is exists then updating will be slow (cuz the validation stuff)
             # otherwise it will be fast
+            log.info(f"[green]Update config for {name} [cyan]{jar.name}")
             if not plugins_config.get(name, sy.YAML(None, sy.EmptyNone())).data:
                 plugin_data: sy.YAML = default_plugin_data
             else:
