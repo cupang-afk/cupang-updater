@@ -29,6 +29,14 @@ class ModrinthList(sy.Str):
         return val
 
 
+class ModrinthVersionType(sy.Str):
+    def validate_scalar(self, chunk):
+        val = chunk.contents
+        if val.lower() not in ["release", "beta", "alpha"]:
+            chunk.expecting_but_found("when expecting one of ['release', 'beta', 'alpha']")
+        return val
+
+
 class ModrinthUpdater(PluginUpdaterBase):
     # Updater information
     name = "Modrinth"
@@ -39,6 +47,7 @@ class ModrinthUpdater(PluginUpdaterBase):
             "name_startwith": sy.EmptyNone() | sy.Str(),
             "loaders": sy.EmptyNone() | ModrinthList(),
             "game_versions": sy.EmptyNone() | ModrinthList(),
+            "version_type": sy.EmptyNone() | ModrinthVersionType(),
         }
     )
     plugin_config_default = """
@@ -46,10 +55,12 @@ class ModrinthUpdater(PluginUpdaterBase):
         # name_startwith: file name start with this value, example "Geyser-Spigot"
         # loaders: (optional) example paper, or for many loaders ["paper", "folia"]
         # game_versions: (optional) example 1.20.4, or for many game_versions ["1.20.4", "1.18.2"]
+        # version_type: (optional) example release or beta or alpha
         id:
         name_startwith:
         loaders:
         game_versions:
+        version_type:
     """
     api_url = "https://api.modrinth.com/v2"
 
@@ -73,7 +84,13 @@ class ModrinthUpdater(PluginUpdaterBase):
         # Return the plugin version or None if not available
         return self.plugin_version
 
-    def get_update_data(self, project_id: str, loaders: str = None, game_versions: str = None):
+    def get_update_data(
+        self,
+        project_id: str,
+        loaders: str = None,
+        game_versions: str = None,
+        version_type: str = None,
+    ):
         def is_valid_syntax(input: str):
             try:
                 # Validate syntax using literal_eval
@@ -103,7 +120,8 @@ class ModrinthUpdater(PluginUpdaterBase):
             self.make_url(self.api_url, "project", project_id, "version", **params),
             headers=headers,
             condition=lambda res: HTTPStatus(res.getcode()) == HTTPStatus.OK
-            and res.getheader("content-type", "").split(";", 1)[0].lower() == headers["Accept"].lower(),
+            and res.getheader("content-type", "").split(";", 1)[0].lower()
+            == headers["Accept"].lower(),
         )
         if res is None:
             return None
@@ -113,7 +131,9 @@ class ModrinthUpdater(PluginUpdaterBase):
 
         # Sort the release data by date_published for release versions
         date_sorted_project_data = {
-            Date.from_string(x["date_published"]).utc: x for x in list_release_data if x["version_type"] == "release"
+            Date.from_string(x["date_published"]).utc: x
+            for x in list_release_data
+            if x["version_type"].lower() == version_type.lower()
         }
 
         # Set update_data to the latest release version
@@ -150,7 +170,10 @@ class ModrinthUpdater(PluginUpdaterBase):
 
         # Retrieve update data from Modrinth
         release_data = self.get_update_data(
-            project_id, plugin_config.get("loaders"), plugin_config.get("game_versions")
+            project_id,
+            plugin_config.get("loaders"),
+            plugin_config.get("game_versions"),
+            plugin_config.get("version_type", "release"),
         )
         if not release_data:
             return False
@@ -179,7 +202,9 @@ class ModrinthUpdater(PluginUpdaterBase):
             in ["application/java-archive", "application/octet-stream", "application/zip"],
         )
         if not check_file:
-            self.get_log().error(f"When checking update for {self.plugin_name} got url {self.url} but its not a file")
+            self.get_log().error(
+                f"When checking update for {self.plugin_name} got url {self.url} but its not a file"
+            )
             return False
 
         # Update plugin version to the remote version
