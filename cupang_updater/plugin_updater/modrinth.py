@@ -173,7 +173,7 @@ class ModrinthUpdater(PluginUpdaterBase):
             project_id,
             plugin_config.get("loaders"),
             plugin_config.get("game_versions"),
-            plugin_config.get("version_type", "release"),
+            plugin_config.get("version_type") or "release",
         )
         if not release_data:
             return False
