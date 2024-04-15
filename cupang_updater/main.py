@@ -14,7 +14,7 @@ from .plugin_updater import (
     ModrinthUpdater,
     SpigotUpdater,
 )
-from .server_updater import PaperUpdater, ServerjarsUpdater
+from .server_updater import PaperUpdater, PurpurUpdater, ServerjarsUpdater
 from .task.scan import scan_plugins
 from .task.update import update_plugins
 
@@ -28,8 +28,9 @@ def main():
         u = UpdaterManager()
         e = ExtManager()
 
-        s.register(ServerjarsUpdater())
+        s.register(PurpurUpdater())
         s.register(PaperUpdater())
+        s.register(ServerjarsUpdater())
         for i in [
             CustomUpdater,
             BukkitUpdater,
@@ -50,7 +51,8 @@ def main():
         if not c.get("settings.server_folder").data:
             while True:
                 server_folder = Prompt.ask(
-                    "Enter server folder, must be a full path (i.e. /root/minecraft)", console=app_console
+                    "Enter server folder, must be a full path (i.e. /root/minecraft)",
+                    console=app_console,
                 )
                 server_folder = Path(server_folder)
                 if server_folder.is_absolute():
